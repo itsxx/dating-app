@@ -1,9 +1,15 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
 const { errorHandler } = require('./middleware/errorHandler');
+const { setupWebSocket } = require('./config/websocket');
 
 const app = express();
+const server = http.createServer(app);
+
+// Setup WebSocket
+setupWebSocket(server);
 
 // Middleware
 app.use(cors({
@@ -14,6 +20,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/chat', require('./routes/chat'));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -35,7 +42,7 @@ app.use(errorHandler);
 
 // Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
