@@ -24,13 +24,17 @@ function validatePassword(password) {
   return password && password.length >= 8;
 }
 
+function getPasswordValidationError() {
+  return '密码至少需要 8 位';
+}
+
 async function register(email, password) {
   if (!validateEmail(email)) {
     throw new ValidationError('Invalid email format');
   }
 
   if (!validatePassword(password)) {
-    throw new ValidationError('Password must be at least 8 characters');
+    throw new ValidationError(getPasswordValidationError());
   }
 
   const existingUser = await db.query(
@@ -48,6 +52,12 @@ async function register(email, password) {
   const result = await db.query(
     'INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)',
     [userId, email, passwordHash]
+  );
+
+  // 自动创建默认 profile
+  await db.query(
+    'INSERT INTO profiles (id, user_id, display_name, bio, zodiac_sign) VALUES (?, ?, ?, ?, ?)',
+    [generateUUID(), userId, '', '', '']
   );
 
   return { id: userId, email };
@@ -68,6 +78,15 @@ async function login(email, password) {
 
   if (!isValid) {
     throw new ValidationError('Invalid email or password', { code: 'AUTH_INVALID_CREDENTIALS' });
+  }
+
+  // 检查是否存在 profile，不存在则创建
+  const profileCheck = await db.query('SELECT id FROM profiles WHERE user_id = ?', [user.id]);
+  if (profileCheck.rows.length === 0) {
+    await db.query(
+      'INSERT INTO profiles (id, user_id, display_name, bio, zodiac_sign, birthday) VALUES (?, ?, ?, ?, ?, ?)',
+      [generateUUID(), user.id, '', '', '', '2000-01-01']
+    );
   }
 
   return { id: user.id, email: user.email };

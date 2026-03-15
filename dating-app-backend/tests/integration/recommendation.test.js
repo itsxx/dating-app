@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../src/index');
+const { app } = require('../../src/index');
 const db = require('../../src/config/database');
 
 describe('Recommendation Integration', () => {

@@ -16,7 +16,23 @@ async function getProfile(userId) {
     [userId]
   );
 
-  return result.rows[0] || null;
+  const row = result.rows[0];
+  if (!row) return null;
+
+  // 将数据库字段映射为前端期望的字段名
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    name: row.display_name || '',
+    avatar: row.avatar_url || '',
+    bio: row.bio || '',
+    birthday: row.birthday || '',
+    mbtiType: row.mbti_type || '',
+    zodiac: row.zodiac_sign || '',
+    email: row.email,
+    age: row.age || null,
+    gender: row.gender || '',
+  };
 }
 
 async function createProfile(userId, profileData) {
@@ -71,8 +87,15 @@ async function updateProfile(userId, updates) {
     values.push(updates.avatarUrl);
   }
 
+  if (updates.birthday !== undefined) {
+    fields.push(`birthday = ?`);
+    values.push(updates.birthday);
+  }
+
+  // age 和 gender 字段在当前数据库结构中不存在，忽略它们
+
   if (fields.length === 0) {
-    throw new ValidationError('No fields to update');
+    throw new ValidationError('没有要更新的字段');
   }
 
   values.push(userId);

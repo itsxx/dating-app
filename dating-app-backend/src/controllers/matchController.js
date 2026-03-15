@@ -15,7 +15,7 @@ async function sendLike(req, res, next) {
   } catch (err) {
     if (err.message === 'Already liked this user') {
       return res.status(400).json({
-        error: { code: 'MATCH_ALREADY_LIKED', message: err.message }
+        error: { code: 'MATCH_ALREADY_LIKED', message: '您已经喜欢过这位用户了，等待缘分发生吧～' }
       });
     }
     next(err);

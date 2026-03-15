@@ -22,7 +22,7 @@ NotFoundError.prototype = Error.prototype;
 
 function ValidationError(message, details) {
   this.statusCode = 400;
-  this.code = 'VALIDATION_ERROR';
+  this.code = details?.code || 'VALIDATION_ERROR';
   this.message = message;
   this.details = details;
 }

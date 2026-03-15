@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../src/index');
+const { app } = require('../../src/index');
 const db = require('../../src/config/database');
 
 describe('Chat Integration', () => {
@@ -36,11 +36,12 @@ describe('Chat Integration', () => {
       .send({ displayName: 'User 2', birthday: '1990-01-02' });
 
     // Create a match manually for testing
-    const matchRes = await db.query(
-      'INSERT INTO matches (user1_id, user2_id) VALUES ($1, $2) RETURNING *',
-      [userId1, userId2]
+    // Note: We need to provide an explicit id for SQLite compatibility
+    matchId = `match_${Date.now()}`;
+    await db.query(
+      'INSERT INTO matches (id, user1_id, user2_id) VALUES ($1, $2, $3)',
+      [matchId, userId1, userId2]
     );
-    matchId = matchRes.rows[0].id;
   });
 
   describe('GET /api/chat/conversations', () => {

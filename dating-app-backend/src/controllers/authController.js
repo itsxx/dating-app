@@ -45,7 +45,7 @@ async function loginController(req, res, next) {
 async function getMeController(req, res, next) {
   try {
     const result = await db.query(
-      'SELECT id, email FROM users WHERE id = $1',
+      'SELECT id, email FROM users WHERE id = ?',
       [req.user.userId]
     );
 

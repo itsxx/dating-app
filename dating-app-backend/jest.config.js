@@ -3,6 +3,9 @@ module.exports = {
   coverageDirectory: 'coverage',
   collectCoverageFrom: ['src/**/*.js'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+  testEnvironmentOptions: {
+    NODE_ENV: 'test'
+  },
   coverageThreshold: {
     global: {
       branches: 70,
