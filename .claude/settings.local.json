@@ -50,7 +50,8 @@
       "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth git-credential 2>&1)",
       "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" repo view --json url -q '.url' 2>&1)",
       "Bash(cmd //c \"taskkill /PID 28400 /F\")",
-      "Bash(cmd //c \"taskkill /PID 16564 /F\")"
+      "Bash(cmd //c \"taskkill /PID 16564 /F\")",
+      "Bash(cmd //c \"taskkill /PID 22872 /F\")"
     ]
   }
 }
