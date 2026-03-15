@@ -3,6 +3,7 @@ services:
     name: dating-app-backend
     env: node
     region: singapore
+    rootDir: dating-app-backend
     buildCommand: npm install
     startCommand: node src/index.js
     envVars:
@@ -18,4 +19,6 @@ services:
         value: 7d
       - key: FRONTEND_URL
         sync: false
+      - key: SQLITE_DB_PATH
+        value: /opt/render/project/src/dating_app.db
     healthCheckPath: /health
