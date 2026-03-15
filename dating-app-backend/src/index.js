@@ -4,9 +4,18 @@ const cors = require('cors');
 const http = require('http');
 const { errorHandler } = require('./middleware/errorHandler');
 const { setupWebSocket } = require('./config/websocket');
+const { initDatabase } = require('./config/database');
 
 const app = express();
 const server = http.createServer(app);
+
+// Initialize database
+initDatabase().then(() => {
+  console.log('Database initialized');
+}).catch((err) => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
+});
 
 // Setup WebSocket
 setupWebSocket(server);
@@ -20,6 +29,10 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/mbti', require('./routes/mbti'));
+app.use('/api/recommendations', require('./routes/recommendations'));
+app.use('/api/matches', require('./routes/matches'));
 app.use('/api/chat', require('./routes/chat'));
 
 // Health check
@@ -46,4 +59,4 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-module.exports = app;
+module.exports = { app, server };

@@ -1,6 +1,11 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const db = require('../config/database');
 const { ValidationError } = require('../middleware/errorHandler');
+
+function generateUUID() {
+  return crypto.randomUUID();
+}
 
 async function hashPassword(password) {
   return bcrypt.hash(password, 12);
@@ -29,7 +34,7 @@ async function register(email, password) {
   }
 
   const existingUser = await db.query(
-    'SELECT id FROM users WHERE email = $1',
+    'SELECT id FROM users WHERE email = ?',
     [email]
   );
 
@@ -38,18 +43,19 @@ async function register(email, password) {
   }
 
   const passwordHash = await hashPassword(password);
+  const userId = generateUUID();
 
   const result = await db.query(
-    'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',
-    [email, passwordHash]
+    'INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)',
+    [userId, email, passwordHash]
   );
 
-  return result.rows[0];
+  return { id: userId, email };
 }
 
 async function login(email, password) {
   const result = await db.query(
-    'SELECT id, email, password_hash FROM users WHERE email = $1',
+    'SELECT id, email, password_hash FROM users WHERE email = ?',
     [email]
   );
 

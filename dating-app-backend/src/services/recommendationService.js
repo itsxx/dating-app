@@ -2,13 +2,18 @@ const db = require('../config/database');
 const { getComplementaryZodiac } = require('../utils/zodiac');
 const { getComplementaryMBTI } = require('../utils/mbti');
 const { NotFoundError } = require('../middleware/errorHandler');
+const crypto = require('crypto');
+
+function generateUUID() {
+  return crypto.randomUUID();
+}
 
 async function getRecommendations(userId, settings = {}) {
   const { zodiacFilter, mbtiFilter, sortBy = 'birthday' } = settings;
 
   // Get current user's profile
   const userResult = await db.query(
-    'SELECT birthday, mbti_type, zodiac_sign FROM profiles WHERE user_id = $1',
+    'SELECT birthday, mbti_type, zodiac_sign FROM profiles WHERE user_id = ?',
     [userId]
   );
 
@@ -19,32 +24,32 @@ async function getRecommendations(userId, settings = {}) {
   const user = userResult.rows[0];
   const filters = [];
   const values = [userId, userId];
-  let paramIndex = 3;
 
   // Apply zodiac filter
   if (zodiacFilter === 'same') {
-    filters.push(`zodiac_sign = $${paramIndex++}`);
+    filters.push(`zodiac_sign = ?`);
     values.push(user.zodiac_sign);
   } else if (zodiacFilter === 'complementary') {
     const complements = getComplementaryZodiac(user.zodiac_sign);
-    filters.push(`zodiac_sign = ANY($${paramIndex++}::text[])`);
-    values.push(complements);
+    const placeholders = complements.map(() => '?').join(',');
+    filters.push(`zodiac_sign IN (${placeholders})`);
+    values.push(...complements);
   }
 
   // Apply MBTI filter
   if (mbtiFilter === 'same') {
-    filters.push(`mbti_type = $${paramIndex++}`);
+    filters.push(`mbti_type = ?`);
     values.push(user.mbti_type);
   } else if (mbtiFilter === 'complementary') {
     const complement = getComplementaryMBTI(user.mbti_type);
-    filters.push(`mbti_type = $${paramIndex++}`);
+    filters.push(`mbti_type = ?`);
     values.push(complement);
   }
 
   // Build order by clause
   let orderBy = '';
   if (sortBy === 'birthday') {
-    orderBy = `ABS(EXTRACT(EPOCH FROM (birthday - $${paramIndex++})))`;
+    orderBy = `ABS(julianday(birthday) - julianday(?))`;
     values.push(user.birthday);
   } else if (sortBy === 'zodiac') {
     orderBy = `CASE WHEN zodiac_sign = '${user.zodiac_sign}' THEN 0 ELSE 1 END`;
@@ -57,15 +62,15 @@ async function getRecommendations(userId, settings = {}) {
   const query = `
     SELECT user_id, display_name, avatar_url, bio, birthday, mbti_type, zodiac_sign
     FROM profiles
-    WHERE user_id != $1
+    WHERE user_id != ?
     AND user_id NOT IN (
       SELECT DISTINCT CASE
-        WHEN user1_id = $2 THEN user2_id
+        WHEN user1_id = ? THEN user2_id
         ELSE user1_id
       END FROM matches
     )
     AND user_id NOT IN (
-      SELECT receiver_id FROM likes WHERE sender_id = $2
+      SELECT receiver_id FROM likes WHERE sender_id = ?
     )
     ${whereClause}
     ORDER BY ${orderBy}
@@ -78,7 +83,7 @@ async function getRecommendations(userId, settings = {}) {
 
 async function getSettings(userId) {
   const result = await db.query(
-    'SELECT * FROM recommendation_settings WHERE user_id = $1',
+    'SELECT * FROM recommendation_settings WHERE user_id = ?',
     [userId]
   );
 
@@ -93,16 +98,33 @@ async function getSettings(userId) {
 async function updateSettings(userId, settings) {
   const { zodiacFilter, mbtiFilter, sortBy } = settings;
 
-  const result = await db.query(
-    `INSERT INTO recommendation_settings (user_id, zodiac_filter, mbti_filter, sort_by)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (user_id)
-     UPDATE SET zodiac_filter = $2, mbti_filter = $3, sort_by = $4, updated_at = NOW()
-     RETURNING *`,
-    [userId, zodiacFilter || 'none', mbtiFilter || 'none', sortBy || 'birthday']
+  // Check if settings exist
+  const existing = await db.query(
+    'SELECT * FROM recommendation_settings WHERE user_id = ?',
+    [userId]
   );
 
-  return result.rows[0];
+  if (existing.rows.length > 0) {
+    await db.query(
+      `UPDATE recommendation_settings
+       SET zodiac_filter = ?, mbti_filter = ?, sort_by = ?, updated_at = datetime('now')
+       WHERE user_id = ?`,
+      [zodiacFilter || 'none', mbtiFilter || 'none', sortBy || 'birthday', userId]
+    );
+  } else {
+    await db.query(
+      `INSERT INTO recommendation_settings (user_id, zodiac_filter, mbti_filter, sort_by)
+       VALUES (?, ?, ?, ?)`,
+      [userId, zodiacFilter || 'none', mbtiFilter || 'none', sortBy || 'birthday']
+    );
+  }
+
+  return {
+    user_id: userId,
+    zodiac_filter: zodiacFilter || 'none',
+    mbti_filter: mbtiFilter || 'none',
+    sort_by: sortBy || 'birthday'
+  };
 }
 
 module.exports = {

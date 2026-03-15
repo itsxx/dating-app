@@ -46,7 +46,7 @@ async function getUserProfile(req, res, next) {
   try {
     const result = await db.query(
       `SELECT display_name, avatar_url, bio, birthday, mbti_type, zodiac_sign
-       FROM profiles WHERE user_id = $1`,
+       FROM profiles WHERE user_id = ?`,
       [req.params.userId]
     );
 

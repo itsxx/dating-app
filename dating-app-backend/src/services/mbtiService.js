@@ -8,7 +8,7 @@ async function submitMBTI(userId, answers) {
 
   await db.query(
     `INSERT INTO mbti_tests (user_id, answers, result_type)
-     VALUES ($1, $2, $3)`,
+     VALUES (?, ?, ?)`,
     [userId, JSON.stringify(answers), result]
   );
 

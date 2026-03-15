@@ -1,69 +1,69 @@
 require('dotenv').config();
-const { Pool } = require('pg');
+const { initDatabase, getDb } = require('../src/config/database');
 
 const createTables = `
 CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS profiles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  display_name VARCHAR(50),
-  avatar_url VARCHAR(500),
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  display_name TEXT,
+  avatar_url TEXT,
   bio TEXT,
-  birthday DATE NOT NULL,
-  mbti_type VARCHAR(4),
-  zodiac_sign VARCHAR(20),
-  latitude DECIMAL(9,6),
-  longitude DECIMAL(9,6),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  birthday TEXT NOT NULL,
+  mbti_type TEXT,
+  zodiac_sign TEXT,
+  latitude REAL,
+  longitude REAL,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS mbti_tests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  answers JSONB,
-  result_type VARCHAR(4),
-  completed_at TIMESTAMP DEFAULT NOW()
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  answers TEXT,
+  result_type TEXT,
+  completed_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS recommendation_settings (
-  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  zodiac_filter VARCHAR(20) DEFAULT 'none',
-  mbti_filter VARCHAR(20) DEFAULT 'none',
-  sort_by VARCHAR(20) DEFAULT 'birthday',
-  updated_at TIMESTAMP DEFAULT NOW()
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  zodiac_filter TEXT DEFAULT 'none',
+  mbti_filter TEXT DEFAULT 'none',
+  sort_by TEXT DEFAULT 'birthday',
+  updated_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS likes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  receiver_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT NOW(),
+  id TEXT PRIMARY KEY,
+  sender_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  receiver_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  created_at TEXT DEFAULT (datetime('now')),
   UNIQUE(sender_id, receiver_id)
 );
 
 CREATE TABLE IF NOT EXISTS matches (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user1_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  user2_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT NOW(),
+  id TEXT PRIMARY KEY,
+  user1_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  user2_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  created_at TEXT DEFAULT (datetime('now')),
   UNIQUE(user1_id, user2_id)
 );
 
 CREATE TABLE IF NOT EXISTS messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
-  sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  id TEXT PRIMARY KEY,
+  match_id TEXT REFERENCES matches(id) ON DELETE CASCADE,
+  sender_id TEXT REFERENCES users(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
-  is_read BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT NOW()
+  is_read INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
 );
 
 -- Indexes
@@ -78,15 +78,13 @@ CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at DESC);
 `;
 
 async function init() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
   try {
-    await pool.query(createTables);
+    await initDatabase();
+    const db = getDb();
+    db.run(createTables);
     console.log('Database tables created successfully');
-    await pool.end();
   } catch (err) {
     console.error('Error creating tables:', err);
-    await pool.end();
     process.exit(1);
   }
 }

@@ -6,31 +6,35 @@ async function sendLike(senderId, receiverId) {
     throw new Error('Cannot like yourself');
   }
 
+  const crypto = require('crypto');
+
   try {
     await db.query(
-      'INSERT INTO likes (sender_id, receiver_id) VALUES ($1, $2)',
+      'INSERT INTO likes (sender_id, receiver_id) VALUES (?, ?)',
       [senderId, receiverId]
     );
 
     // Check if it's a mutual match
     const matchCheck = await db.query(
-      'SELECT * FROM likes WHERE sender_id = $1 AND receiver_id = $2',
+      'SELECT * FROM likes WHERE sender_id = ? AND receiver_id = ?',
       [receiverId, senderId]
     );
 
     let isMatch = false;
     if (matchCheck.rows.length > 0) {
-      // Create match
-      const matchResult = await db.query(
-        'INSERT INTO matches (user1_id, user2_id) VALUES ($1, $2) RETURNING *',
-        [senderId, receiverId]
+      // Create match with UUID
+      const matchId = crypto.randomUUID();
+      await db.query(
+        'INSERT INTO matches (id, user1_id, user2_id) VALUES (?, ?, ?)',
+        [matchId, senderId, receiverId]
       );
       isMatch = true;
     }
 
     return { isMatch };
   } catch (err) {
-    if (err.code === '23505') { // Unique constraint violation
+    // SQLite error code for UNIQUE constraint violation
+    if (err.message && err.message.includes('UNIQUE constraint failed')) {
       throw new Error('Already liked this user');
     }
     throw err;
@@ -42,7 +46,7 @@ async function getLikes(userId) {
     `SELECT l.*, p.display_name, p.avatar_url
      FROM likes l
      JOIN profiles p ON l.sender_id = p.user_id
-     WHERE l.receiver_id = $1`,
+     WHERE l.receiver_id = ?`,
     [userId]
   );
 
@@ -52,14 +56,14 @@ async function getLikes(userId) {
 async function getMatches(userId) {
   const result = await db.query(
     `SELECT m.*,
-            CASE WHEN m.user1_id = $1 THEN m.user2_id ELSE m.user1_id END as partner_id,
+            CASE WHEN m.user1_id = ? THEN m.user2_id ELSE m.user1_id END as partner_id,
             p.display_name as partner_name,
             p.avatar_url as partner_avatar
      FROM matches m
-     JOIN profiles p ON (CASE WHEN m.user1_id = $1 THEN m.user2_id ELSE m.user1_id END) = p.user_id
-     WHERE m.user1_id = $1 OR m.user2_id = $1
+     JOIN profiles p ON (CASE WHEN m.user1_id = ? THEN m.user2_id ELSE m.user1_id END) = p.user_id
+     WHERE m.user1_id = ? OR m.user2_id = ?
      ORDER BY m.created_at DESC`,
-    [userId]
+    [userId, userId, userId, userId]
   );
 
   return result.rows;
@@ -67,15 +71,21 @@ async function getMatches(userId) {
 
 async function deleteMatch(matchId, userId) {
   const result = await db.query(
-    'DELETE FROM matches WHERE id = $1 AND (user1_id = $2 OR user2_id = $2) RETURNING *',
-    [matchId, userId]
+    'DELETE FROM matches WHERE id = ? AND (user1_id = ? OR user2_id = ?)',
+    [matchId, userId, userId]
   );
 
-  if (result.rows.length === 0) {
+  // SQLite doesn't support RETURNING, so fetch the match before deleting
+  const matchCheck = await db.query(
+    'SELECT * FROM matches WHERE id = ? AND (user1_id = ? OR user2_id = ?)',
+    [matchId, userId, userId]
+  );
+
+  if (matchCheck.rows.length === 0) {
     throw new NotFoundError('Match not found');
   }
 
-  return result.rows[0];
+  return matchCheck.rows[0];
 }
 
 module.exports = {
