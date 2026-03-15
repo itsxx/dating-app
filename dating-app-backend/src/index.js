@@ -7,18 +7,6 @@ const { setupWebSocket } = require('./config/websocket');
 const { initDatabase } = require('./config/database');
 
 const app = express();
-const server = http.createServer(app);
-
-// Initialize database
-initDatabase().then(() => {
-  console.log('Database initialized');
-}).catch((err) => {
-  console.error('Failed to initialize database:', err);
-  process.exit(1);
-});
-
-// Setup WebSocket
-setupWebSocket(server);
 
 // Middleware
 app.use(cors({
@@ -53,12 +41,28 @@ app.use((req, res) => {
 // Error handler
 app.use(errorHandler);
 
-// Start server only in non-test environment
+// Initialize database and setup server
+let server;
+initDatabase().then(() => {
+  console.log('Database initialized');
+
+  // Setup WebSocket only if server is created
+  if (server) {
+    setupWebSocket(server);
+  }
+}).catch((err) => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
+});
+
+// Create server for non-Vercel environments
 const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.VERCEL !== '1') {
+  server = http.createServer(app);
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 }
 
+// Export for Vercel
 module.exports = { app, server };

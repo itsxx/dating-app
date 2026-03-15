@@ -2,7 +2,8 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '../../dating_app.db');
+// Use /tmp for Vercel serverless, otherwise use local path
+const DB_PATH = process.env.SQLITE_DB_PATH || path.join(__dirname, '../../dating_app.db');
 
 let db = null;
 

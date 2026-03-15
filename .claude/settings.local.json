@@ -47,7 +47,9 @@
       "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status 2>&1)",
       "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" repo create dating-app --public --description \"Dating App with MBTI Matching\" --source=. --remote=origin --push 2>&1)",
       "Bash(cmd //c \"taskkill /PID 17364 /F\")",
-      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth git-credential 2>&1)"
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth git-credential 2>&1)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" repo view --json url -q '.url' 2>&1)",
+      "Bash(cmd //c \"taskkill /PID 28400 /F\")"
     ]
   }
 }
