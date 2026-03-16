@@ -17,7 +17,6 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production",
-    "SQLITE_DB_PATH": "/tmp/dating_app.db"
+    "NODE_ENV": "production"
   }
 }
