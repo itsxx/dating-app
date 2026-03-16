@@ -1,7 +1,7 @@
 require('dotenv').config();
-const { initDatabase, getDb } = require('../src/config/database');
+const { initDatabase, getDb, isPostgreSQL } = require('../src/config/database');
 
-const createTables = `
+const createTablesSQLite = `
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
@@ -77,12 +77,95 @@ CREATE INDEX IF NOT EXISTS idx_messages_match ON messages(match_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at DESC);
 `;
 
+const createTablesPostgreSQL = `
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS profiles (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  display_name TEXT,
+  avatar_url TEXT,
+  bio TEXT,
+  birthday DATE NOT NULL,
+  mbti_type TEXT,
+  zodiac_sign TEXT,
+  latitude REAL,
+  longitude REAL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS mbti_tests (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  answers JSONB,
+  result_type TEXT,
+  completed_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS recommendation_settings (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  zodiac_filter TEXT DEFAULT 'none',
+  mbti_filter TEXT DEFAULT 'none',
+  sort_by TEXT DEFAULT 'birthday',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS likes (
+  id TEXT PRIMARY KEY,
+  sender_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  receiver_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(sender_id, receiver_id)
+);
+
+CREATE TABLE IF NOT EXISTS matches (
+  id TEXT PRIMARY KEY,
+  user1_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  user2_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user1_id, user2_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  match_id TEXT REFERENCES matches(id) ON DELETE CASCADE,
+  sender_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_profiles_birthday ON profiles(birthday);
+CREATE INDEX IF NOT EXISTS idx_profiles_zodiac ON profiles(zodiac_sign);
+CREATE INDEX IF NOT EXISTS idx_profiles_mbti ON profiles(mbti_type);
+CREATE INDEX IF NOT EXISTS idx_likes_receiver ON likes(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_matches_user1 ON matches(user1_id);
+CREATE INDEX IF NOT EXISTS idx_matches_user2 ON matches(user2_id);
+CREATE INDEX IF NOT EXISTS idx_messages_match ON messages(match_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at DESC);
+`;
+
 async function init() {
   try {
     await initDatabase();
-    const db = getDb();
-    db.run(createTables);
-    console.log('Database tables created successfully');
+
+    if (isPostgreSQL) {
+      const db = getDb();
+      await db.query(createTablesPostgreSQL);
+      console.log('PostgreSQL tables created successfully');
+    } else {
+      const db = getDb();
+      db.run(createTablesSQLite);
+      console.log('SQLite tables created successfully');
+    }
   } catch (err) {
     console.error('Error creating tables:', err);
     process.exit(1);

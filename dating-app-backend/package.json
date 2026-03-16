@@ -10,7 +10,8 @@
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:integration": "cross-env NODE_ENV=test jest tests/integration --runInBand",
     "db:init": "node scripts/init-db.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "build": "echo 'Backend ready for Vercel'"
   },
   "keywords": [
     "dating",
