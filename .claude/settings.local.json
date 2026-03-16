@@ -53,7 +53,8 @@
       "Bash(cmd //c \"taskkill /PID 16564 /F\")",
       "Bash(cmd //c \"taskkill /PID 22872 /F\")",
       "WebFetch(domain:github.com)",
-      "Bash(vercel login:*)"
+      "Bash(vercel login:*)",
+      "WebFetch(domain:dating-app-f5ee-ao83gz4p9-xiangxiangs-projects-42d0cb13.vercel.app)"
     ]
   }
 }
