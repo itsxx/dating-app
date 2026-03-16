@@ -272,7 +272,7 @@ git push  # Vercel 会自动从 GitHub 同步并部署
 
 Vercel Serverless **不支持 WebSocket**，聊天功能需要降级为 HTTP 轮询。
 
-当前代码中的 WebSocket 部分会在 Vercel 环境下自动禁用。
+当前代码中的 WebSocket 部分会在 Vercel 环境下自动禁用（见 `src/index.js` 第 60 行）。
 
 ### 2. 数据库
 
@@ -285,6 +285,12 @@ Vercel Serverless **不支持 WebSocket**，聊天功能需要降级为 HTTP 轮
 ### 3. Serverless 冷启动
 
 Vercel Serverless 函数在闲置后会冷启动，首次请求可能需要 1-3 秒。
+
+### 4. 数据库自动适配
+
+代码会自动根据 `DATABASE_URL` 环境变量检测数据库类型：
+- 有 `DATABASE_URL`：使用 PostgreSQL
+- 无 `DATABASE_URL`：使用 SQLite（本地开发）
 
 ---
 
@@ -331,6 +337,10 @@ Vercel Serverless 函数在闲置后会冷启动，首次请求可能需要 1-3 
 ### 3. 404 错误
 
 确保 API 请求路径是 `/api/xxx`，Vercel 配置了正确的路由。
+
+### 4. WebSocket 连接失败
+
+Vercel Serverless 不支持 WebSocket，聊天功能已自动降级为 HTTP 轮询。
 
 ---
 
